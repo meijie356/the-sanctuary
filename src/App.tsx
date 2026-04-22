@@ -21,15 +21,35 @@ interface Message {
   timestamp: number;
 }
 
+const MESSAGES_STORAGE_KEY = 'the_sanctuary_chat_messages';
+
 export default function App() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const saved = localStorage.getItem(MESSAGES_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmingClear, setIsConfirmingClear] = useState(false);
+  const [showSoulInsight, setShowSoulInsight] = useState(false);
+  const [devClicks, setDevClicks] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const handleTitleClick = () => {
+    const newClicks = devClicks + 1;
+    if (newClicks >= 5) {
+      setShowSoulInsight(!showSoulInsight);
+      setDevClicks(0);
+    } else {
+      setDevClicks(newClicks);
+      // Reset clicks after 2 seconds of inactivity
+      setTimeout(() => setDevClicks(0), 2000);
+    }
+  };
+
   useEffect(() => {
+    localStorage.setItem(MESSAGES_STORAGE_KEY, JSON.stringify(messages));
     // Scroll to bottom on new message
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -77,6 +97,7 @@ export default function App() {
       return;
     }
     SoulLedger.clear();
+    localStorage.removeItem(MESSAGES_STORAGE_KEY);
     setMessages([]); // Full reset
     setIsConfirmingClear(false);
   };
@@ -88,7 +109,7 @@ export default function App() {
         
         {/* Header */}
         <header className="flex h-20 items-center justify-between px-10 border-b border-sanctuary-border bg-sanctuary-bg/80 backdrop-blur-md sticky top-0 z-30">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={handleTitleClick}>
             <div>
               <h1 className="font-serif text-lg font-medium tracking-tight">Personal Reflection</h1>
               <p className="text-[0.75rem] text-sanctuary-muted">The Sanctuary</p>
@@ -96,6 +117,18 @@ export default function App() {
           </div>
           
           <div className="flex items-center space-x-6">
+            {showSoulInsight && (
+              <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs max-w-sm absolute top-24 right-10 z-50 shadow-xl animate-in fade-in slide-in-from-top-2">
+                <div className="flex justify-between items-center mb-2 border-b border-amber-200 pb-1">
+                  <span className="font-bold text-amber-800 uppercase tracking-widest">Soul Insight (Dev)</span>
+                  <button onClick={() => setShowSoulInsight(false)}><X size={14} className="text-amber-600" /></button>
+                </div>
+                <p className="text-amber-900 leading-relaxed italic">
+                  {SoulLedger.getProfile() || "Soul Profile is currently empty."}
+                </p>
+              </div>
+            )}
+
             <div className="hidden md:block bg-[#f0ede6] px-5 py-2.5 rounded-full font-serif italic text-[0.9rem] text-sanctuary-accent">
               "Come to me, all you who are weary..."
             </div>
@@ -113,7 +146,7 @@ export default function App() {
         {/* Content */}
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-12 max-w-4xl mx-auto w-full"
+          className="flex-1 overflow-y-auto p-6 space-y-8 max-w-4xl mx-auto w-full"
         >
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-32 text-center max-w-sm mx-auto animate-in fade-in duration-1000">
@@ -129,20 +162,15 @@ export default function App() {
           )}
 
           <AnimatePresence mode="popLayout">
-            {messages.map((message, index) => {
-              // Calculate "freshness" for the asymmetric window
-              const succeedingSameRole = messages.slice(index + 1).filter(m => m.role === message.role).length;
-              const isProminent = message.role === 'user' 
-                ? succeedingSameRole < 10 
-                : succeedingSameRole < 3;
-              
+            {messages.map((message) => {
+              // Removed fading bubbles logic - all messages now remain prominent
               return (
                 <motion.div
                   key={message.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ 
-                    opacity: isProminent ? 1 : 0.4, 
-                    scale: isProminent ? 1 : 0.98,
+                    opacity: 1, 
+                    scale: 1,
                     y: 0 
                   }}
                   transition={{ duration: 0.5, ease: "easeOut" }}
@@ -151,13 +179,12 @@ export default function App() {
                   <div className={`
                     flex max-w-[85%] sm:max-w-[75%] gap-4 
                     ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}
-                    ${!isProminent && 'group/marginalia'}
                   `}>
                     <div className={`
                       flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-500
                       ${message.role === 'user' 
-                        ? (isProminent ? 'bg-sanctuary-accent border-sanctuary-accent text-white shadow-lg shadow-sanctuary-accent/20' : 'bg-sanctuary-accent/20 border-sanctuary-accent/10 text-sanctuary-accent/40')
-                        : (isProminent ? 'bg-white border-sanctuary-border text-sanctuary-accent shadow-sm' : 'bg-transparent border-sanctuary-border/10 text-sanctuary-muted/30')}
+                        ? 'bg-sanctuary-accent border-sanctuary-accent text-white shadow-lg shadow-sanctuary-accent/20'
+                        : 'bg-white border-sanctuary-border text-sanctuary-accent shadow-sm'}
                     `}>
                       {message.role === 'user' ? <User size={14} /> : <Compass size={14} />}
                     </div>
@@ -169,16 +196,14 @@ export default function App() {
                       <div className={`
                         px-6 py-4 rounded-[20px] text-[0.95rem] leading-relaxed shadow-sm transition-all duration-500
                         ${message.role === 'user' 
-                          ? (isProminent ? 'bg-sanctuary-accent text-white rounded-br-none' : 'bg-sanctuary-accent/5 text-sanctuary-ink/40 border border-sanctuary-accent/10 rounded-br-none italic text-sm') 
-                          : (isProminent ? 'bg-white text-sanctuary-ink border border-sanctuary-border rounded-bl-none font-serif' : 'bg-transparent text-sanctuary-muted/40 border border-dashed border-sanctuary-border/20 rounded-bl-none font-serif text-sm')}
+                          ? 'bg-sanctuary-accent text-white rounded-br-none' 
+                          : 'bg-white text-sanctuary-ink border border-sanctuary-border rounded-bl-none font-serif'}
                       `}>
                         {message.text}
                       </div>
-                      {isProminent && (
-                        <span className="text-[10px] text-sanctuary-muted opacity-60 px-1">
-                          {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
+                      <span className="text-[10px] text-sanctuary-muted opacity-60 px-1">
+                        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
                   </div>
                 </motion.div>
