@@ -35,6 +35,15 @@ export default function App() {
   const [devClicks, setDevClicks] = useState(0);
   
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleTitleClick = () => {
     const newClicks = devClicks + 1;
@@ -111,8 +120,8 @@ export default function App() {
         <header className="flex h-20 items-center justify-between px-10 border-b border-sanctuary-border bg-sanctuary-bg/80 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center space-x-3 cursor-pointer select-none" onClick={handleTitleClick}>
             <div>
-              <h1 className="font-serif text-lg font-medium tracking-tight">Personal Reflection</h1>
-              <p className="text-[0.75rem] text-sanctuary-muted">The Sanctuary</p>
+              <h1 className="font-serif text-lg font-medium tracking-tight">Silas</h1>
+              <p className="text-[0.75rem] text-sanctuary-muted uppercase tracking-[0.05em]">Your Sanctuary Companion</p>
             </div>
           </div>
           
@@ -234,8 +243,9 @@ export default function App() {
         {/* Input Area */}
         <div className="px-10 py-6 pb-10 bg-sanctuary-bg/80 backdrop-blur-md sticky bottom-0 z-30">
           <div className="max-w-4xl mx-auto relative group">
-            <div className="bg-white border border-sanctuary-border rounded-full p-2 pl-6 flex items-center shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow group-focus-within:shadow-md">
-              <input
+            <div className="bg-white border border-sanctuary-border rounded-[26px] p-2 pl-6 flex items-end shadow-[0_4px_12px_rgba(0,0,0,0.05)] transition-shadow group-focus-within:shadow-md">
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -244,14 +254,15 @@ export default function App() {
                     handleSend();
                   }
                 }}
-                placeholder="Share what's on your heart..."
-                className="flex-1 bg-transparent border-none outline-none text-[1rem] placeholder:text-sanctuary-muted py-2"
+                placeholder="Share with Silas what's on your heart..."
+                rows={1}
+                className="flex-1 bg-transparent border-none outline-none text-[1rem] placeholder:text-sanctuary-muted py-3 resize-none max-h-[200px] overflow-y-auto leading-relaxed"
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || isLoading}
                 className={`
-                  w-11 h-11 rounded-full flex items-center justify-center transition-all
+                  w-11 h-11 rounded-full flex items-center justify-center transition-all flex-shrink-0 mb-0.5
                   ${!input.trim() || isLoading 
                     ? 'bg-gray-100 text-gray-300' 
                     : 'bg-sanctuary-accent text-white shadow-lg shadow-sanctuary-accent/20 hover:scale-105 active:scale-95'}
@@ -261,7 +272,7 @@ export default function App() {
               </button>
             </div>
             <p className="text-center text-[0.7rem] text-sanctuary-muted mt-3">
-              Conversations are stored in your Soul Ledger for long-term guidance.
+              Your conversations with Silas are private and preserved in your Soul Profile.
             </p>
           </div>
         </div>
